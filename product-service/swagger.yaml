@@ -1,0 +1,116 @@
+# product-service/swagger.yaml
+openapi: 3.0.0
+info:
+  title: AWS Shop API
+  description: API for AWS Shop backend services
+  version: 1.0.0
+  contact:
+    name: Maria
+
+servers:
+  - url: https://pwxdsed4h8.execute-api.eu-west-1.amazonaws.com/prod
+    description: Development server
+
+tags:
+  - name: Products
+    description: Product management endpoints
+
+paths:
+  /products:
+    get:
+      tags:
+        - Products
+      summary: Get all products
+      description: Returns a list of all products
+      operationId: getProductList
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get product by ID
+      description: Returns a single product by ID
+      operationId: getProductById
+      parameters:
+        - name: id
+          in: path
+          description: Enter product's ID to execute
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Product:
+      type: object
+      required:
+        - id
+        - title
+        - price
+        - count
+      properties:
+        id:
+          type: string
+          example: "1"
+          description: ID of the product
+        title:
+          type: string
+          example: "Apple pie"
+          description: Name of the product
+        description:
+          type: string
+          example: "Granny's Apple pie"
+          description: Description of the product
+        price:
+          type: number
+          format: float
+          example: 999
+          description: Price of the product in USD
+        count:
+          type: integer
+          example: 10
+          description: Available number of products
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "Internal server error"
+          description: Error message describing what went wrong
