@@ -3,6 +3,9 @@ import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Runtime, Function, Code } from "aws-cdk-lib/aws-lambda";
 import { Construct } from "constructs";
+import { config } from "dotenv";
+
+config();
 
 export class ProductServiceStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -12,13 +15,13 @@ export class ProductServiceStack extends Stack {
     const productsTable = Table.fromTableName(
       this, 
       'ProductsTable',
-      'products'
+      process.env.PRODUCTS_TABLE_NAME!,
     );
 
     const stocksTable = Table.fromTableName(
       this, 
       'StocksTable',
-      'stocks'
+      process.env.STOCKS_TABLE_NAME!,
     );
 
     // Create Lambda function
@@ -42,6 +45,7 @@ export class ProductServiceStack extends Stack {
       timeout: Duration.seconds(5),
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
       }
     });
 
@@ -53,14 +57,17 @@ export class ProductServiceStack extends Stack {
       timeout: Duration.seconds(5),
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
       }
     });
 
     // Grant permissions to Lambda functions to access DynamoDB table
     productsTable.grantReadData(getProductsList);
-    stocksTable.grantReadData(getProductsList);
     productsTable.grantReadData(getProductByID);
     productsTable.grantWriteData(createProduct);
+    stocksTable.grantReadData(getProductsList);
+    stocksTable.grantReadData(getProductByID);
+    stocksTable.grantWriteData(createProduct);
 
     // Create API Gateway
     const api = new RestApi(this, "Product Service", {

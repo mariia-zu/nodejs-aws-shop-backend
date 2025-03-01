@@ -10,7 +10,8 @@
     "test": "jest",
     "cdk": "cdk",
     "deploy": "npm run build && cdk deploy",
-    "destroy": "cdk destroy"
+    "destroy": "cdk destroy",
+    "fill-tables": "ts-node ./script/fillTables.ts"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.751.0",
@@ -22,6 +23,7 @@
     "aws-cdk": "2.178.2",
     "aws-cdk-lib": "^2.181.0",
     "constructs": "^10.4.2",
+    "dotenv": "^16.4.7",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",

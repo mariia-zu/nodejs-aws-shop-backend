@@ -7,7 +7,7 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event: any) => {
   const productTableName = process.env.PRODUCTS_TABLE_NAME;
-  const stocksTableName = process.env.PRODUCTS_TABLE_NAME;
+  const stocksTableName = process.env.STOCKS_TABLE_NAME;
 
   try {
     const productCommand = new ScanCommand({

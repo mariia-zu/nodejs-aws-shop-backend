@@ -6,20 +6,33 @@ const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event: APIGatewayEvent) => {
-  try {
-    const tableName = process.env.PRODUCTS_TABLE_NAME;
+  const productsTableName = process.env.PRODUCTS_TABLE_NAME;
+  const stocksTableName = process.env.STOCKS_TABLE_NAME;
 
+  try {
     const id = event.pathParameters?.id;
-    const command = new GetCommand({
-      TableName: tableName,
+    console.log(`Lambda is looking for product with id ${id}`);
+
+    const productCommand = new GetCommand({
+      TableName: productsTableName,
       Key: {
-        id
+        id,
       },
     });
+    const stockCommand = new GetCommand({
+      TableName: stocksTableName,
+      Key: {
+        product_id: id,
+      },
+    });
+    const productsResult = await docClient.send(productCommand);
+    const stocksResult = await docClient.send(stockCommand);
+    const product = {
+      ...productsResult.Item,
+      count: stocksResult.Item?.count,
+    };
 
-    const result = await docClient.send(command);
-
-    if (!result.Item) {
+    if (!product) {
       return {
         statusCode: 404,
         headers: {
@@ -41,7 +54,7 @@ export const handler = async (event: APIGatewayEvent) => {
         "Access-Control-Allow-Methods": "GET",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(result.Item),
+      body: JSON.stringify(product),
     };
   } catch (error) {
     console.error(`Error processing event: ${error}`);

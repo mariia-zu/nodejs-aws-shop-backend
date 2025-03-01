@@ -1,11 +1,14 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, TransactWriteCommandInput, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { APIGatewayEvent } from 'aws-lambda';
+
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event: APIGatewayEvent) => {
+  const productsTableName = process.env.PRODUCTS_TABLE_NAME;
+  const stocksTableName = process.env.STOCKS_TABLE_NAME;
   try {
     const product = event.body ? JSON.parse(event.body) : undefined;
     if (!event.body || !product || !product.id || !product.title || !product.price) {
@@ -22,14 +25,35 @@ export const handler = async (event: APIGatewayEvent) => {
       };
     }
 
-    const command = new PutCommand({
-      TableName: process.env.PRODUCTS_TABLE_NAME,
-      Item: {
-        id: product.id,
-        title: product.title,
-        description: product.description,
-        price: product.price,
+    const { id, title, description, price, count } = product;
+
+    console.log(`Creating new product with id ${id}, title ${title}, description ${description}, price ${price}, count ${count}`)
+
+    const transactItems: NonNullable<TransactWriteCommandInput["TransactItems"]> = [
+      {
+        Put: {
+          TableName: productsTableName,
+          Item: {
+            id,
+            title,
+            description,
+            price,
+          },
+        },
       },
+      {
+        Put: {
+          TableName: stocksTableName,
+          Item: {
+            product_id: id,
+            count,
+          },
+        },
+      },
+    ];
+
+    const command = new TransactWriteCommand({
+      TransactItems: transactItems,
     });
   
     const response = await docClient.send(command);
