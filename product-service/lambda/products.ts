@@ -1,5 +1,3 @@
-import { count } from 'console';
-
 export const PRODUCTS = [
   {
     id: '1',
