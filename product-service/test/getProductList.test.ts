@@ -1,5 +1,5 @@
 import { handler } from '../lambda/getProductsList';
-import { PRODUCTS } from '../lambda/products';
+import { PRODUCTS } from '../script/products';
 
 describe('Lambda function handler', () => {
   

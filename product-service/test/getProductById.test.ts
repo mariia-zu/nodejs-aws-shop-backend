@@ -1,6 +1,6 @@
 import { APIGatewayEvent } from 'aws-lambda';
 import { handler } from '../lambda/getProductsById';
-import { PRODUCTS } from '../lambda/products';
+import { PRODUCTS } from '../script/products';
 
 describe('Lambda function handler', () => {
   test('should successfully find the product', async () => {

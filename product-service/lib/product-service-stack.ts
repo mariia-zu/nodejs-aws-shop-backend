@@ -1,11 +1,28 @@
 import { Duration, Stack, StackProps } from "aws-cdk-lib";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
+import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Runtime, Function, Code } from "aws-cdk-lib/aws-lambda";
 import { Construct } from "constructs";
+import { config } from "dotenv";
+
+config();
 
 export class ProductServiceStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
+
+    // Reference existing DynamoDB table
+    const productsTable = Table.fromTableName(
+      this, 
+      'ProductsTable',
+      process.env.PRODUCTS_TABLE_NAME!,
+    );
+
+    const stocksTable = Table.fromTableName(
+      this, 
+      'StocksTable',
+      process.env.STOCKS_TABLE_NAME!,
+    );
 
     // Create Lambda function
     const getProductsList = new Function(this, "GetProductsListFunction", {
@@ -14,6 +31,10 @@ export class ProductServiceStack extends Stack {
       handler: "getProductsList.handler",
       memorySize: 128,
       timeout: Duration.seconds(5),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      }
     });
 
     const getProductByID = new Function(this, "GetProductByID", {
@@ -22,7 +43,31 @@ export class ProductServiceStack extends Stack {
       handler: "getProductsById.handler",
       memorySize: 128,
       timeout: Duration.seconds(5),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      }
     });
+
+    const createProduct = new Function(this, "CreateProduct", {
+      runtime: Runtime.NODEJS_18_X,
+      code: Code.fromAsset("lambda"),
+      handler: "createProduct.handler",
+      memorySize: 128,
+      timeout: Duration.seconds(5),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      }
+    });
+
+    // Grant permissions to Lambda functions to access DynamoDB table
+    productsTable.grantReadData(getProductsList);
+    productsTable.grantReadData(getProductByID);
+    productsTable.grantWriteData(createProduct);
+    stocksTable.grantReadData(getProductsList);
+    stocksTable.grantReadData(getProductByID);
+    stocksTable.grantWriteData(createProduct);
 
     // Create API Gateway
     const api = new RestApi(this, "Product Service", {
@@ -36,5 +81,6 @@ export class ProductServiceStack extends Stack {
     products
       .addResource("{id}")
       .addMethod("GET", new LambdaIntegration(getProductByID));
+    products.addMethod("POST", new LambdaIntegration(createProduct));
   }
 }
