@@ -1,7 +1,12 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, TransactWriteCommand, TransactWriteCommandInput } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  TransactWriteCommand,
+  TransactWriteCommandInput,
+} from "@aws-sdk/lib-dynamodb";
 import { PRODUCTS } from "./products";
 import { config } from "dotenv";
+import { randomUUID } from "crypto";
 
 config();
 const client = new DynamoDBClient({});
@@ -12,33 +17,37 @@ function fill() {
   const productsTableName = process.env.PRODUCTS_TABLE_NAME;
   const stockTableName = process.env.STOCKS_TABLE_NAME;
 
-  const transactItems = products.reduce((acc: NonNullable<TransactWriteCommandInput["TransactItems"]>, product) => {
-    const { id, title, description, price } = product;
+  const transactItems = products.reduce(
+    (acc: NonNullable<TransactWriteCommandInput["TransactItems"]>, product) => {
+      const id = randomUUID();
+      const { title, description, price } = product;
 
-    return [
-      ...acc,
-      {
-        Put: {
-          TableName: productsTableName,
-          Item: {
-            id,
-            title,
-            description,
-            price,
+      return [
+        ...acc,
+        {
+          Put: {
+            TableName: productsTableName,
+            Item: {
+              id,
+              title,
+              description,
+              price,
+            },
           },
         },
-      },
-      {
-        Put: {
-          TableName: stockTableName,
-          Item: {
-            product_id: id,
-            count: Math.floor(Math.random() * 100),
+        {
+          Put: {
+            TableName: stockTableName,
+            Item: {
+              product_id: id,
+              count: Math.floor(Math.random() * 100),
+            },
           },
         },
-      },
-    ];
-  }, []);
+      ];
+    },
+    []
+  );
 
   const command = new TransactWriteCommand({
     TransactItems: transactItems,

@@ -29,7 +29,7 @@ export const handler = async (event: APIGatewayEvent) => {
     const stocksResult = await docClient.send(stockCommand);
     const product = {
       ...productsResult.Item,
-      count: stocksResult.Item?.count,
+      count: stocksResult.Item?.count || 0,
     };
 
     if (!product) {

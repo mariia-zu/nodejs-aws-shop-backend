@@ -1,6 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, TransactWriteCommandInput, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { APIGatewayEvent } from 'aws-lambda';
+import { randomUUID } from 'crypto';
 
 
 const client = new DynamoDBClient({});
@@ -11,7 +12,7 @@ export const handler = async (event: APIGatewayEvent) => {
   const stocksTableName = process.env.STOCKS_TABLE_NAME;
   try {
     const product = event.body ? JSON.parse(event.body) : undefined;
-    if (!event.body || !product || !product.id || !product.title || !product.price) {
+    if (!event.body || !product || !product.title || !product.price) {
       return {
         statusCode: 400,
         headers: {
@@ -24,8 +25,9 @@ export const handler = async (event: APIGatewayEvent) => {
         body: JSON.stringify({ message: "Missing request body or required fields (id, title, price)" }),
       };
     }
-
-    const { id, title, description, price, count } = product;
+    
+    const id = randomUUID();
+    const { title, description, price, count } = product;
 
     console.log(`Creating new product with id ${id}, title ${title}, description ${description}, price ${price}, count ${count}`)
 
