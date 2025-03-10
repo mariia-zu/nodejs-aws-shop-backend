@@ -1,7 +1,7 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { S3Event } from "aws-lambda";
 import { Readable } from "stream";
-import * as csv from "csv-parser";
+import csvParser from 'csv-parser';
 
 const s3Client = new S3Client();
 
@@ -9,20 +9,20 @@ export const handler = async (event: S3Event) => {
   try {
     for (const record of event.Records) {
       const bucket = record.s3.bucket.name;
-      const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, " "));
+      const filePath = decodeURIComponent(record.s3.object.key.replace(/\+/g, " "));
 
-      console.log(`Processing file ${key} from bucket ${bucket}`);
+      console.log(`Processing file ${filePath} from bucket ${bucket}`);
 
       const { Body } = await s3Client.send(
         new GetObjectCommand({
           Bucket: bucket,
-          Key: key,
+          Key: filePath,
         })
       );
 
       if (Body instanceof Readable) {
         await new Promise((res, rej) => {
-          Body.pipe(csv())
+          Body.pipe(csvParser())
             .on("data", (data) => {
               console.log("Parsed csv record:", JSON.stringify(data));
             })
@@ -30,9 +30,33 @@ export const handler = async (event: S3Event) => {
               console.error("Error parsing CSV:", error);
               rej(error);
             })
-            .on("end", () => {
+            .on("end", async () => {
               console.log("Finished processing CSV file");
-              res(null);
+
+              try {
+                const destinationPath = filePath.replace('uploaded', 'parsed');
+                
+                await s3Client.send(
+                  new CopyObjectCommand({
+                    Bucket: bucket,
+                    CopySource: `${bucket}/${filePath}`,
+                    Key: destinationPath,
+                  })
+                );
+
+                await s3Client.send(
+                  new DeleteObjectCommand({
+                    Bucket: bucket,
+                    Key: filePath,
+                  })
+                );
+
+                console.log(`Successfully moved file from ${filePath} to ${destinationPath}`);
+                res(null);
+              } catch (moveError) {
+                console.error("Error moving file:", moveError);
+                rej(moveError);
+              }
             });
         });
       }
