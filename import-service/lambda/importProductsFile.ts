@@ -42,7 +42,7 @@ export const handler = async (event: APIGatewayEvent) => {
         "Access-Control-Allow-Methods": "GET",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ signedUrl }),
+      body: signedUrl,
     };
   } catch (error) {
     console.error(`Error processing event: ${error}`);
