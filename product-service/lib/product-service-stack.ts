@@ -84,6 +84,7 @@ export class ProductServiceStack extends Stack {
     );
 
     catalogItemsQueue.grantConsumeMessages(catalogBatchProcess);
+    createProductTopic.grantPublish(catalogBatchProcess);
 
     const getProductsList = new Function(this, "GetProductsListFunction", {
       runtime: Runtime.NODEJS_22_X,
