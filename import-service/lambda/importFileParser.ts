@@ -2,14 +2,19 @@ import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, S3Client } fr
 import { S3Event } from "aws-lambda";
 import { Readable } from "stream";
 import csvParser from 'csv-parser';
+import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 
 const s3Client = new S3Client();
+const sqsClient = new SQSClient();
+const SQS_QUEUE_URL = process.env.SQS_QUEUE_URL;
 
 export const handler = async (event: S3Event) => {
   try {
     for (const record of event.Records) {
       const bucket = record.s3.bucket.name;
-      const filePath = decodeURIComponent(record.s3.object.key.replace(/\+/g, " "));
+      const filePath = decodeURIComponent(
+        record.s3.object.key.replace(/\+/g, " ")
+      );
 
       console.log(`Processing file ${filePath} from bucket ${bucket}`);
 
@@ -23,8 +28,14 @@ export const handler = async (event: S3Event) => {
       if (Body instanceof Readable) {
         await new Promise((res, rej) => {
           Body.pipe(csvParser())
-            .on("data", (data) => {
-              console.log("Parsed csv record:", JSON.stringify(data));
+            .on("data", async (data) => {
+              try {
+                Body.pause();
+                await sendToSQS(data);
+                Body.resume();
+              } catch (error) {
+                console.error("Processing error", error);
+              }
             })
             .on("error", (error) => {
               console.error("Error parsing CSV:", error);
@@ -34,8 +45,8 @@ export const handler = async (event: S3Event) => {
               console.log("Finished processing CSV file");
 
               try {
-                const destinationPath = filePath.replace('uploaded', 'parsed');
-                
+                const destinationPath = filePath.replace("uploaded", "parsed");
+
                 await s3Client.send(
                   new CopyObjectCommand({
                     Bucket: bucket,
@@ -51,7 +62,9 @@ export const handler = async (event: S3Event) => {
                   })
                 );
 
-                console.log(`Successfully moved file from ${filePath} to ${destinationPath}`);
+                console.log(
+                  `Successfully moved file from ${filePath} to ${destinationPath}`
+                );
                 res(null);
               } catch (moveError) {
                 console.error("Error moving file:", moveError);
@@ -70,3 +83,25 @@ export const handler = async (event: S3Event) => {
     throw error;
   }
 };
+
+async function sendToSQS(record: any): Promise<void> {
+  try {
+    const command = new SendMessageCommand({
+      QueueUrl: SQS_QUEUE_URL,
+      MessageBody: JSON.stringify({
+        title: record.title,
+        description: record.description,
+        price: Number(record.price),
+        count: Number(record.count),
+      }),
+    });
+
+    console.log("SQS_QUEUE_URL=", SQS_QUEUE_URL);
+
+    await sqsClient.send(command);
+    console.log("Successfully sent message to SQS:", record.title);
+  } catch (error) {
+    console.error("Error sending message to SQS:", error);
+    throw error;
+  }
+}
