@@ -1,7 +1,12 @@
-import { Duration, Stack, StackProps } from "aws-cdk-lib";
+import { Duration, Fn, Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { Runtime, Function, Code, LayerVersion } from "aws-cdk-lib/aws-lambda";
-import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
+import {
+  AuthorizationType,
+  LambdaIntegration,
+  RestApi,
+  TokenAuthorizer,
+} from "aws-cdk-lib/aws-apigateway";
 import { Bucket, EventType } from "aws-cdk-lib/aws-s3";
 import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
 import { config } from "dotenv";
@@ -12,6 +17,13 @@ config();
 export class ImportServiceStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
+
+    const basicAuthorizationArn = Fn.importValue("BasicAuthorizationArn");
+    const basicAuthorization = Function.fromFunctionArn(
+      this,
+      "BasicAuthorizationFunction",
+      basicAuthorizationArn
+    );
 
     const s3Bucket = Bucket.fromBucketName(
       this,
@@ -88,7 +100,15 @@ export class ImportServiceStack extends Stack {
       },
     });
 
+    const authorizer = new TokenAuthorizer(this, "Authorizer", {
+      handler: basicAuthorization,
+      // identitySource: "method.request.header.Authorization",
+    });
+
     const importAPI = api.root.addResource("import");
-    importAPI.addMethod("GET", new LambdaIntegration(importProductsFile));
+    importAPI.addMethod("GET", new LambdaIntegration(importProductsFile), {
+      authorizer,
+      authorizationType: AuthorizationType.CUSTOM,
+    });
   }
 }
