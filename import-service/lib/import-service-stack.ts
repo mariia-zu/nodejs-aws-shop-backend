@@ -92,49 +92,19 @@ export class ImportServiceStack extends Stack {
     const api = new RestApi(this, "Import Service", {
       restApiName: "Shop Import Service",
       description: "This is the Import Service API",
-      defaultCorsPreflightOptions: {
-        allowOrigins: ["*"],
-        allowMethods: ["GET", "PUT", "POST"],
-        allowHeaders: ["*"],
-        exposeHeaders: [],
-        allowCredentials: true,
-        maxAge: Duration.days(1),
-      },
-    });
-
-    api.addGatewayResponse("Unauthorized", {
-      type: ResponseType.UNAUTHORIZED,
-      statusCode: "401",
-      responseHeaders: {
-        "Access-Control-Allow-Origin": "'*'",
-        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
-      },
-      templates: {
-        "application/json": '{"message": "Unauthorized", "statusCode": 401}',
-      },
-    });
-
-    api.addGatewayResponse("Forbidden", {
-      type: ResponseType.ACCESS_DENIED,
-      statusCode: "403",
-      responseHeaders: {
-        "Access-Control-Allow-Origin": "'*'",
-        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
-      },
-      templates: {
-        "application/json": '{"message": "Forbidden", "statusCode": 403}',
-      },
     });
 
     const authorizer = new TokenAuthorizer(this, "Authorizer", {
       handler: basicAuthorizer,
-      // identitySource: "method.request.header.Authorization",
     });
 
     const importAPI = api.root.addResource("import");
     importAPI.addMethod("GET", new LambdaIntegration(importProductsFile), {
       authorizer,
       authorizationType: AuthorizationType.CUSTOM,
+    });
+    importAPI.addCorsPreflight({
+      allowOrigins: ["*"],
     });
   }
 }
