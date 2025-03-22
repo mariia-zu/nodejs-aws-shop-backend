@@ -6,11 +6,42 @@ import {
 
 export const handler: APIGatewayTokenAuthorizerHandler = async (
   event: APIGatewayTokenAuthorizerEvent
-): Promise<any> => {
-// ): Promise<APIGatewayAuthorizerResult> | any => {
-  const token = event.authorizationToken;
+): Promise<APIGatewayAuthorizerResult> => {
+  console.log("EVENT: ", event);
+  if (event.type !== "TOKEN") {
+    return generatePolicy("user", event.methodArn, "Deny");
+  }
 
-  console.log(event);
+  const authorizationToken = event.authorizationToken;
+  const encodedCred = authorizationToken.split(" ")[1];
+  const encodedToken = Buffer.from(encodedCred, "base64");
+  const [username, password] = encodedToken.toString("utf-8").split(":");
+  console.log("username: ", username);
+  console.log("password: ", password);
 
-  return new Promise(() => {});
+  const storedUserPassword = process.env[username];
+
+  const effect =
+    !storedUserPassword || storedUserPassword !== password ? "Deny" : "Allow";
+  return generatePolicy(encodedCred, event.methodArn, effect);
+};
+
+const generatePolicy = (
+  principalId: string,
+  resource: string,
+  effect: "Deny" | "Allow"
+) => {
+  return {
+    principalId,
+    policyDocument: {
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Action: "execute-api:Invoke",
+          Effect: effect,
+          Resource: resource,
+        },
+      ],
+    },
+  };
 };

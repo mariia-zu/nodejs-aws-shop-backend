@@ -12,8 +12,7 @@ export class AuthorizationServiceStack extends cdk.Stack {
     const password = "TEST_PASSWORD";
 
     const environment = {
-      LOGIN: login,
-      PASSWORD: password,
+      [login]: password,
     };
 
     const basicAuthorizer = new Function(this, "basicAuthorizerFunction", {
