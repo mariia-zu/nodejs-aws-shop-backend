@@ -3,13 +3,16 @@ import { Construct } from "constructs";
 import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
 import { CfnOutput, Duration } from "aws-cdk-lib";
 import { ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { config } from "dotenv";
+
+config();
 
 export class AuthorizationServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const login = "mariia-zu";
-    const password = "TEST_PASSWORD";
+    const login = process.env.LOGIN!;
+    const password = process.env.PASSWORD!;
 
     const environment = {
       [login]: password,
