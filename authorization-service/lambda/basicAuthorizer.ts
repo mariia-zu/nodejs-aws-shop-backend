@@ -30,7 +30,7 @@ const generatePolicy = (
   principalId: string,
   resource: string,
   effect: "Deny" | "Allow"
-) => {
+): APIGatewayAuthorizerResult => {
   return {
     principalId,
     policyDocument: {
@@ -42,6 +42,9 @@ const generatePolicy = (
           Resource: resource,
         },
       ],
+    },
+    context: {
+      message: effect === "Allow" ? "Authorized" : "Unauthorized",
     },
   };
 };

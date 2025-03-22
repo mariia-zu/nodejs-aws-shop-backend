@@ -4,6 +4,7 @@ import { Runtime, Function, Code, LayerVersion } from "aws-cdk-lib/aws-lambda";
 import {
   AuthorizationType,
   LambdaIntegration,
+  ResponseType,
   RestApi,
   TokenAuthorizer,
 } from "aws-cdk-lib/aws-apigateway";
@@ -96,7 +97,32 @@ export class ImportServiceStack extends Stack {
         allowMethods: ["GET", "PUT", "POST"],
         allowHeaders: ["*"],
         exposeHeaders: [],
+        allowCredentials: true,
         maxAge: Duration.days(1),
+      },
+    });
+
+    api.addGatewayResponse("Unauthorized", {
+      type: ResponseType.UNAUTHORIZED,
+      statusCode: "401",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+      },
+      templates: {
+        "application/json": '{"message": "Unauthorized", "statusCode": 401}',
+      },
+    });
+
+    api.addGatewayResponse("Forbidden", {
+      type: ResponseType.ACCESS_DENIED,
+      statusCode: "403",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+      },
+      templates: {
+        "application/json": '{"message": "Forbidden", "statusCode": 403}',
       },
     });
 
