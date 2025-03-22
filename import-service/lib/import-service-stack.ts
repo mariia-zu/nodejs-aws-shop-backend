@@ -18,11 +18,11 @@ export class ImportServiceStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const basicAuthorizationArn = Fn.importValue("BasicAuthorizationArn");
-    const basicAuthorization = Function.fromFunctionArn(
+    const basicAuthorizerArn = Fn.importValue("BasicAuthorizerArn");
+    const basicAuthorizer = Function.fromFunctionArn(
       this,
       "BasicAuthorizationFunction",
-      basicAuthorizationArn
+      basicAuthorizerArn
     );
 
     const s3Bucket = Bucket.fromBucketName(
@@ -101,7 +101,7 @@ export class ImportServiceStack extends Stack {
     });
 
     const authorizer = new TokenAuthorizer(this, "Authorizer", {
-      handler: basicAuthorization,
+      handler: basicAuthorizer,
       // identitySource: "method.request.header.Authorization",
     });
 
