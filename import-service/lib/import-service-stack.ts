@@ -1,7 +1,13 @@
-import { Duration, Stack, StackProps } from "aws-cdk-lib";
+import { Duration, Fn, Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { Runtime, Function, Code, LayerVersion } from "aws-cdk-lib/aws-lambda";
-import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
+import {
+  AuthorizationType,
+  LambdaIntegration,
+  ResponseType,
+  RestApi,
+  TokenAuthorizer,
+} from "aws-cdk-lib/aws-apigateway";
 import { Bucket, EventType } from "aws-cdk-lib/aws-s3";
 import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
 import { config } from "dotenv";
@@ -12,6 +18,13 @@ config();
 export class ImportServiceStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
+
+    const basicAuthorizerArn = Fn.importValue("BasicAuthorizerArn");
+    const basicAuthorizer = Function.fromFunctionArn(
+      this,
+      "BasicAuthorizationFunction",
+      basicAuthorizerArn
+    );
 
     const s3Bucket = Bucket.fromBucketName(
       this,
@@ -79,16 +92,19 @@ export class ImportServiceStack extends Stack {
     const api = new RestApi(this, "Import Service", {
       restApiName: "Shop Import Service",
       description: "This is the Import Service API",
-      defaultCorsPreflightOptions: {
-        allowOrigins: ["*"],
-        allowMethods: ["GET", "PUT", "POST"],
-        allowHeaders: ["*"],
-        exposeHeaders: [],
-        maxAge: Duration.days(1),
-      },
+    });
+
+    const authorizer = new TokenAuthorizer(this, "Authorizer", {
+      handler: basicAuthorizer,
     });
 
     const importAPI = api.root.addResource("import");
-    importAPI.addMethod("GET", new LambdaIntegration(importProductsFile));
+    importAPI.addMethod("GET", new LambdaIntegration(importProductsFile), {
+      authorizer,
+      authorizationType: AuthorizationType.CUSTOM,
+    });
+    importAPI.addCorsPreflight({
+      allowOrigins: ["*"],
+    });
   }
 }
