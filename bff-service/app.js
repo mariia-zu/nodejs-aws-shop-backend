@@ -33,6 +33,12 @@ const server = createServer(async (req, res) => {
   try {
     setHeaders(res);
 
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     console.log(`url: ${req.url}`);
     console.log(`method: ${req.method}`);
 
